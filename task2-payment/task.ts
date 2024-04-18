@@ -1,93 +1,83 @@
-// Define a common interface for payment providers
-interface PaymentProvider {
-    processPayment(amount: number): Promise<boolean>;
+// Enum representing available payment processors
+enum PaymentProcessorType {
+    Stripe,
+    Braintree,
+    PayPal,
 }
 
-// Define the factory interface
-interface PaymentProviderFactory {
-    createProvider(): PaymentProvider;
+// Define a common interface for payment processing strategies
+interface PaymentProcessor {
+    processPayment(amount: number): Promise<string>;
 }
 
-// Stripe payment provider
-class StripeProvider implements PaymentProvider {
-    async processPayment(amount: number): Promise<boolean> {
+// Stripe payment processor
+class Stripe implements PaymentProcessor {
+    async processPayment(amount: number): Promise<string> {
         // Call Stripe API to process payment
         console.log(`Processing payment of $${amount} via Stripe...`);
-        // Simulate response
-        return true;
+        // Simulate Stripe response with a payment ID
+        return new Promise<string>((resolve) => {
+            setTimeout(() => {
+                resolve('Stripe payment ID');
+            }, 1000);
+        });
     }
 }
 
-// Braintree payment provider
-class BraintreeProvider implements PaymentProvider {
-    async processPayment(amount: number): Promise<boolean> {
+// Braintree payment processor
+class Braintree implements PaymentProcessor {
+    async processPayment(amount: number): Promise<string> {
         // Call Braintree API to process payment
         console.log(`Processing payment of $${amount} via Braintree...`);
-        // Simulate response
-        return true;
+        // Simulate Braintree response with a payment ID
+        return new Promise<string>((resolve) => {
+            setTimeout(() => {
+                resolve('Braintree payment ID');
+            }, 1000);
+        });
     }
 }
 
-// PayPal payment provider
-class PayPalProvider implements PaymentProvider {
-    async processPayment(amount: number): Promise<boolean> {
+// PayPal payment processor
+class PayPal implements PaymentProcessor {
+    async processPayment(amount: number): Promise<string> {
         // Call PayPal API to process payment
         console.log(`Processing payment of $${amount} via PayPal...`);
-        // Simulate response
-        return true;
-    }
-}
-
-// Stripe factory
-class StripeFactory implements PaymentProviderFactory {
-    createProvider(): PaymentProvider {
-        return new StripeProvider();
-    }
-}
-
-// Braintree factory
-class BraintreeFactory implements PaymentProviderFactory {
-    createProvider(): PaymentProvider {
-        return new BraintreeProvider();
-    }
-}
-
-// PayPal factory
-class PayPalFactory implements PaymentProviderFactory {
-    createProvider(): PaymentProvider {
-        return new PayPalProvider();
+        // Simulate PayPal response with a payment ID
+        return new Promise<string>((resolve) => {
+            setTimeout(() => {
+                resolve('PayPal payment ID');
+            }, 1000);
+        });
     }
 }
 
 // Order processing class
 class OrderProcessor {
-    paymentProviderFactory: PaymentProviderFactory;
+    paymentProcessor: PaymentProcessor;
+    // Mapping between payment processor types and their corresponding classes
+    private paymentProcessorMap: Record<PaymentProcessorType, new () => PaymentProcessor> = {
+        [PaymentProcessorType.Stripe]: Stripe,
+        [PaymentProcessorType.Braintree]: Braintree,
+        [PaymentProcessorType.PayPal]: PayPal,
+    };
 
-    constructor(paymentProviderFactory: PaymentProviderFactory) {
-        this.paymentProviderFactory = paymentProviderFactory;
+    constructor(paymentProcessorType: PaymentProcessorType) {
+        // Create payment processor instance based on the provided type
+        this.paymentProcessor = new this.paymentProcessorMap[paymentProcessorType]();
     }
 
-    async processOrder(amount: number): Promise<void> {
-        // Get the payment provider based on customer's choice
-        const paymentProvider = this.paymentProviderFactory.createProvider();
-        // Process payment
-        await paymentProvider.processPayment(amount);
-        console.log('Payment processed successfully.');
+    async processOrder(amount: number): Promise<string> {
+        try {
+            // Process payment using the selected payment processor
+            return this.paymentProcessor.processPayment(amount);
+        } catch (error) {
+            throw new Error(`${PaymentProcessorType} payment processing error: ${error.message}`);
+        }
     }
 }
 
-// Example usage
-const stripeFactory = new StripeFactory();
-const braintreeFactory = new BraintreeFactory();
-const paypalFactory = new PayPalFactory();
-
-const orderProcessor = new OrderProcessor(stripeFactory);
-orderProcessor.processOrder(100);
-
-// Change payment provider dynamically
-orderProcessor.paymentProviderFactory = braintreeFactory;
-orderProcessor.processOrder(150);
-
-// Change payment provider again
-orderProcessor.paymentProviderFactory = paypalFactory;
-orderProcessor.processOrder(200);
+function payOrder(amount: number, type: PaymentProcessorType): Promise<string> {
+    const orderProcessor = new OrderProcessor(type);
+    return orderProcessor.processOrder(amount);
+}
